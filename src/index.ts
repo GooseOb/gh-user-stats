@@ -1,4 +1,4 @@
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import { fetchGitHubStats } from "./stats.ts";
 import { getLangToColor } from "./colors.ts";
 

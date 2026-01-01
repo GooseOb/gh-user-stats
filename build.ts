@@ -16,4 +16,5 @@ Bun.build({
   define: {
     TEMPLATES: JSON.stringify(templates),
   },
+  target: "node",
 });

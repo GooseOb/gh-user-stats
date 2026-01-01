@@ -1,5 +1,5 @@
 // src/index.ts
-var {writeFile, mkdir} = (() => ({}));
+import { writeFile, mkdir } from "node:fs/promises";
 
 // src/env.ts
 var getEnvVar = (keys) => {
