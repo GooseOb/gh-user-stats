@@ -1,0 +1,22 @@
+name: "GitHub User Stats"
+description: "Generate SVG GitHub stats"
+author: "GooseOb"
+
+inputs:
+  token:
+    description: "GitHub token (GITHUB_TOKEN or PAT)"
+    required: true
+
+outputs:
+  overview:
+    description: "Path to overview SVG"
+  languages:
+    description: "Path to languages SVG"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"
+
+branding:
+  icon: "bar-chart"
+  color: "blue"
