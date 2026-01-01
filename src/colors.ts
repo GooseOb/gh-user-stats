@@ -10,7 +10,7 @@ export const getLangToColor = () =>
         const nameMatch = /^(\S.*?):/.exec(item);
         const colorMatch = /color:\s*"(#\w{6}|\w+)"/.exec(item);
         if (nameMatch && colorMatch) {
-          result[nameMatch[1].toLowerCase()] = colorMatch[1];
+          result[nameMatch[1]!.toLowerCase()] = colorMatch[1]!;
         }
       }
 

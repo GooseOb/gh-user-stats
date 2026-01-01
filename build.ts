@@ -5,11 +5,10 @@ const templateFiles = await readdir("./templates");
 const templates: Record<string, string> = {};
 
 for (const file of templateFiles) {
-  const content = await Bun.file(`./templates/${file}`).text();
-  templates[file.replace(/\.[^/.]+$/, "")] = content;
+  templates[file.replace(/\.[^/.]+$/, "")] = await Bun.file(
+    `./templates/${file}`,
+  ).text();
 }
-
-// Build the project
 
 Bun.build({
   entrypoints: ["src/index.ts"],
