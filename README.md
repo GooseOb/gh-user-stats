@@ -1,4 +1,4 @@
-# gh-stats
+# gh-user-stats
 
 GitHub user statistics generator.
 
