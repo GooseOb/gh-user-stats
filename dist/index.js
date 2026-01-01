@@ -1,6 +1,89 @@
-var{writeFile:L,mkdir:A}=(()=>({}));var w=(t)=>{for(let e of t){let o=process.env[e]||"";if(o)return o}throw Error(`Set at least one of the following env vars: ${t.join(", ")}`)},d=w(["INPUT_TOKEN","GITHUB_TOKEN"]),f=w(["GITHUB_ACTOR"]);var S=(t)=>new Promise((e)=>{setTimeout(e,t)}),h=async(t)=>{for(let e=0;e<6;e++){let o=await fetch(`https://api.github.com${t}`,{Authorization:`Bearer ${d}`,Accept:"application/vnd.github+json"});if(o.status===202){await S(2000);continue}if(!o.ok)return console.error(`Request to ${t} failed: ${o.status} ${o.statusText}`),null;return o.json()}return console.error(`GitHub API request failed after multiple attempts: ${t}`),null},p=(t)=>fetch("https://api.github.com/graphql",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${d}`},body:JSON.stringify({query:t})}).then((e)=>e.json());var v=async(t)=>{let e=1,o=[];while(!0){let n=await h(`/users/${t}/repos?per_page=100&page=${e}`);if(!n||n.length===0)break;if(o.push(...n.filter((i)=>!i.fork)),e++,n.length<100)break}return o},x=(t,e)=>h(`/repos/${t}/${e}/stats/contributors`),C=async(t)=>{let e=await v(t),o=0,n=0,i=await Promise.all(e.map(({name:c})=>x(t,c)));for(let c of i){if(!c)continue;let a=c.find((r)=>r.author?.login===t);if(!a)continue;for(let r of a.weeks)o+=r.a,n+=r.d}return{additions:o,deletions:n}};var E=`
+// src/index.ts
+var {writeFile, mkdir} = (() => ({}));
+
+// src/env.ts
+var getEnvVar = (keys) => {
+  for (const key of keys) {
+    const val = process.env[key] || "";
+    if (val)
+      return val;
+  }
+  throw new Error(`Set at least one of the following env vars: ${keys.join(", ")}`);
+};
+var ACCESS_TOKEN = getEnvVar(["INPUT_TOKEN", "GITHUB_TOKEN"]);
+var GITHUB_ACTOR = getEnvVar(["GITHUB_ACTOR"]);
+
+// src/api.ts
+var sleep = (ms) => new Promise((res) => {
+  setTimeout(res, ms);
+});
+var req = async (endpoint) => {
+  for (let i = 0;i < 6; i++) {
+    const res = await fetch(`https://api.github.com${endpoint}`, {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      Accept: "application/vnd.github+json"
+    });
+    if (res.status === 202) {
+      await sleep(2000);
+      continue;
+    }
+    if (!res.ok) {
+      console.error(`Request to ${endpoint} failed: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    return res.json();
+  }
+  console.error(`GitHub API request failed after multiple attempts: ${endpoint}`);
+  return null;
+};
+var makeQuery = (query) => fetch("https://api.github.com/graphql", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${ACCESS_TOKEN}`
+  },
+  body: JSON.stringify({ query })
+}).then((res) => res.json());
+
+// src/changed-lines.ts
+var fetchAllRepos = async (owner) => {
+  let page = 1;
+  const repos = [];
+  while (true) {
+    const data = await req(`/users/${owner}/repos?per_page=100&page=${page}`);
+    if (!data || data.length === 0)
+      break;
+    repos.push(...data.filter((r) => !r.fork));
+    page++;
+    if (data.length < 100)
+      break;
+  }
+  return repos;
+};
+var fetchContributorStats = (owner, repo) => req(`/repos/${owner}/${repo}/stats/contributors`);
+var getChangedLines = async (reposOwner) => {
+  const repos = await fetchAllRepos(reposOwner);
+  let additions = 0;
+  let deletions = 0;
+  const stats = await Promise.all(repos.map(({ name }) => fetchContributorStats(reposOwner, name)));
+  for (const repoStats of stats) {
+    if (!repoStats)
+      continue;
+    const me = repoStats.find((c) => c.author?.login === reposOwner);
+    if (!me)
+      continue;
+    for (const week of me.weeks) {
+      additions += week.a;
+      deletions += week.d;
+    }
+  }
+  return { additions, deletions };
+};
+
+// src/stats.ts
+var query = `
 {
-  user(login: "${f}") {
+  user(login: "${GITHUB_ACTOR}") {
     login
     name
     repositories(first: 100, ownerAffiliations: OWNER, isFork: false) {
@@ -23,21 +106,64 @@ var{writeFile:L,mkdir:A}=(()=>({}));var w=(t)=>{for(let e of t){let o=process.en
 	}
   }
 }
-`;async function T(){let t=await p(E);if(t.errors)throw Error(t.errors);let{repositories:e,login:o,name:n,repositoriesContributedTo:i}=t.data.user,c=e.nodes.reduce((s,g)=>s+g.stargazerCount,0),a=(await p(`
+`;
+async function fetchGitHubStats() {
+  const data = await makeQuery(query);
+  if (data.errors) {
+    throw new Error(data.errors);
+  }
+  const { repositories, login, name, repositoriesContributedTo } = data.data.user;
+  const stars = repositories.nodes.reduce((sum, repo) => sum + repo.stargazerCount, 0);
+  const contribYears = (await makeQuery(`
     query { viewer { contributionsCollection { contributionYears } } }
-  `))?.data?.viewer?.contributionsCollection?.contributionYears||[],r=await p(`
+  `))?.data?.viewer?.contributionsCollection?.contributionYears || [];
+  const contribsByYear = await makeQuery(`
     query {
       viewer {
-        ${a.map((s)=>`
-          year${s}: contributionsCollection(
-            from: "${s}-01-01T00:00:00Z",
-            to: "${s+1}-01-01T00:00:00Z"
+        ${contribYears.map((year) => `
+          year${year}: contributionsCollection(
+            from: "${year}-01-01T00:00:00Z",
+            to: "${year + 1}-01-01T00:00:00Z"
           ) { contributionCalendar { totalContributions } }
         `).join(`
 `)}
       }
     }
-  `),m=Object.values(r?.data?.viewer||{}).reduce((s,g)=>s+(g?.contributionCalendar?.totalContributions||0),0),u={};for(let s of e.nodes)for(let g of s.languages?.edges||[]){let b=g.node.name;u[b]=(u[b]||0)+g.size}return{login:o,name:n,repoCount:e.totalCount+i.totalCount,stars:c,contributionsCount:m,languageStats:u,changedLines:await C(f)}}var y=()=>fetch("https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml").then((t)=>t.text()).then((t)=>{let e={};for(let o of t.split(/\n(?=\S)/g)){let n=/^(\S.*?):/.exec(o),i=/color:\s*"(#\w{6}|\w+)"/.exec(o);if(n&&i)e[n[1].toLowerCase()]=i[1]}return e});var $=(t,e)=>L(`generated/${t}.svg`,e({languages:`<svg id="gh-dark-mode-only" width="360" height="210" xmlns="http://www.w3.org/2000/svg">
+  `);
+  const contributionsCount = Object.values(contribsByYear?.data?.viewer || {}).reduce((sum, y) => sum + (y?.contributionCalendar?.totalContributions || 0), 0);
+  const languageStats = {};
+  for (const repo of repositories.nodes) {
+    for (const lang of repo.languages?.edges || []) {
+      const langName = lang.node.name;
+      languageStats[langName] = (languageStats[langName] || 0) + lang.size;
+    }
+  }
+  return {
+    login,
+    name,
+    repoCount: repositories.totalCount + repositoriesContributedTo.totalCount,
+    stars,
+    contributionsCount,
+    languageStats,
+    changedLines: await getChangedLines(GITHUB_ACTOR)
+  };
+}
+
+// src/colors.ts
+var getLangToColor = () => fetch("https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml").then((res) => res.text()).then((colorsRaw) => {
+  const result = {};
+  for (const item of colorsRaw.split(/\n(?=\S)/g)) {
+    const nameMatch = /^(\S.*?):/.exec(item);
+    const colorMatch = /color:\s*"(#\w{6}|\w+)"/.exec(item);
+    if (nameMatch && colorMatch) {
+      result[nameMatch[1].toLowerCase()] = colorMatch[1];
+    }
+  }
+  return result;
+});
+
+// src/index.ts
+var useTemplate = (name, trasform) => writeFile(`generated/${name}.svg`, trasform({ languages: `<svg id="gh-dark-mode-only" width="360" height="210" xmlns="http://www.w3.org/2000/svg">
 <style>
 svg {
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
@@ -186,7 +312,7 @@ div.ellipsis {
 </g>
 </g>
 </svg>
-`,overview:`<svg id="gh-dark-mode-only" width="360" height="210" xmlns="http://www.w3.org/2000/svg">
+`, overview: `<svg id="gh-dark-mode-only" width="360" height="210" xmlns="http://www.w3.org/2000/svg">
 <style>
 svg {
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
@@ -295,17 +421,37 @@ tr {
 </g>
 </g>
 </svg>
-`}[t]),"utf8"),l=await T();await A("generated",{recursive:!0});var k=await y();await Promise.all([$("overview",(t)=>t.replace(/{{ name }}/g,l.login).replace(/{{ stars }}/g,l.stars.toString()).replace(/{{ contributions }}/g,l.contributionsCount.toString()).replace(/{{ lines_changed }}/g,`+${l.changedLines.additions} / -${l.changedLines.deletions}`).replace(/{{ repos }}/g,l.repoCount.toString())),$("languages",(t)=>{let e="",o="",n=Object.values(l.languageStats).reduce((a,r)=>a+r,0),i=Object.entries(l.languageStats).sort((a,r)=>r[1]-a[1]),c=150;return i.forEach(([a,r],m)=>{let u=k[a.toLowerCase()]||"#000000",s=r/n*100;e+=`
-<span style="background-color: ${u};
-width: ${s.toFixed(3)}%;" 
-class="progress-item"></span>`,o+=`
-<li style="animation-delay: ${m*c}ms;">
-<svg xmlns="http://www.w3.org/2000/svg" class="octicon" style="fill:${u};"
+` }[name]), "utf8");
+var stats = await fetchGitHubStats();
+await mkdir("generated", { recursive: true });
+var langToColor = await getLangToColor();
+await Promise.all([
+  useTemplate("overview", (template) => template.replace(/{{ name }}/g, stats.login).replace(/{{ stars }}/g, stats.stars.toString()).replace(/{{ contributions }}/g, stats.contributionsCount.toString()).replace(/{{ lines_changed }}/g, `+${stats.changedLines.additions} / -${stats.changedLines.deletions}`).replace(/{{ repos }}/g, stats.repoCount.toString())),
+  useTemplate("languages", (template) => {
+    let progress = "";
+    let langList = "";
+    const totalSize = Object.values(stats.languageStats).reduce((sum, size) => sum + size, 0);
+    const sortedLanguages = Object.entries(stats.languageStats).sort((a, b) => b[1] - a[1]);
+    const delayBetween = 150;
+    sortedLanguages.forEach(([lang, size], i) => {
+      const color = langToColor[lang.toLowerCase()] || "#000000";
+      const prop = size / totalSize * 100;
+      progress += `
+<span style="background-color: ${color};
+width: ${prop.toFixed(3)}%;" 
+class="progress-item"></span>`;
+      langList += `
+<li style="animation-delay: ${i * delayBetween}ms;">
+<svg xmlns="http://www.w3.org/2000/svg" class="octicon" style="fill:${color};"
 viewBox="0 0 16 16" width="16" height="16">
 <path fill-rule="evenodd"
 d="M8 4a4 4 0 100 8 4 4 0 000-8z"></path>
 </svg>
-<span class="lang">${a}</span>
-<span class="percent">${s.toFixed(2)}%</span>
+<span class="lang">${lang}</span>
+<span class="percent">${prop.toFixed(2)}%</span>
 </li>
-`}),t.replace(/{{ progress }}/g,e).replace(/{{ lang_list }}/g,o)})]);
+`;
+    });
+    return template.replace(/{{ progress }}/g, progress).replace(/{{ lang_list }}/g, langList);
+  })
+]);

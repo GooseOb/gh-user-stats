@@ -16,5 +16,4 @@ Bun.build({
   define: {
     TEMPLATES: JSON.stringify(templates),
   },
-  minify: true,
 });
