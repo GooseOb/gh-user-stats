@@ -4,7 +4,7 @@ GitHub user statistics generator.
 
 Templates were originally borrowed from [jstrieb/github-stats](https://github.com/jstrieb/github-stats) and modified.
 
-## Usage
+## Installation
 
 Make sure you enabled GitHub Pages in your repository settings, In `Pages`, set the source to GitHub Actions.
 
@@ -44,3 +44,18 @@ jobs:
 
       - uses: actions/deploy-pages@v4
 ```
+
+Then you can run it manually or wait for the scheduled time (here it's set to run daily at midnight).
+
+## Usage
+
+Images are uploaded to
+`https://{your_username}.github.io/{repo_name}/{image_name}`
+
+Available images:
+
+- `overview.svg`
+  ![overview](https://gooseob.github.io/GooseOb/overview.svg)
+
+- `languages.svg`
+  ![languages](https://gooseob.github.io/GooseOb/languages.svg)
