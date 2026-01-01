@@ -2,8 +2,7 @@
 node_modules
 
 # output
-out
-*.tgz
+/generated
 
 # code coverage
 coverage

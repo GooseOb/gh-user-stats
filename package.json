@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun run build.ts",
-    "dev": "bun index.ts",
+    "build": "bun ./build.ts",
+    "start": "bun ./dist/index.js",
     "prepare": "husky"
   },
   "devDependencies": {
