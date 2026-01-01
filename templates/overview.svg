@@ -16,7 +16,7 @@ svg {
   ry: 6px;
 }
 
-#gh-dark-mode-only:target #background {
+#gh-dark-mode-only #background {
   fill: #0d1117;
   stroke-width: 0.5px;
 }
@@ -41,7 +41,7 @@ th {
   color: rgb(3, 102, 214);
 }
 
-#gh-dark-mode-only:target th {
+#gh-dark-mode-only th {
   color: #58a6ff;
 }
 
@@ -54,7 +54,7 @@ td {
   color: rgb(88, 96, 105);
 }
 
-#gh-dark-mode-only:target td {
+#gh-dark-mode-only td {
   color: #c9d1d9;
 }
 
@@ -69,7 +69,7 @@ tr {
   vertical-align: top;
 }
 
-#gh-dark-mode-only:target .octicon {
+#gh-dark-mode-only .octicon {
   fill: #8b949e;
 }
 

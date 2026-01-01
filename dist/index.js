@@ -181,7 +181,7 @@ svg {
   ry: 6px;
 }
 
-#gh-dark-mode-only:target #background {
+#gh-dark-mode-only #background {
   fill: #0d1117;
   stroke-width: 0.5px;
 }
@@ -201,7 +201,7 @@ h2 {
   fill: rgb(36, 41, 46);
 }
 
-#gh-dark-mode-only:target h2 {
+#gh-dark-mode-only h2 {
   color: #c9d1d9;
   fill: #c9d1d9;
 }
@@ -241,7 +241,7 @@ div.ellipsis {
   vertical-align: top;
 }
 
-#gh-dark-mode-only:target .octicon {
+#gh-dark-mode-only .octicon {
   color: #8b949e;
   fill: #8b949e;
 }
@@ -256,7 +256,7 @@ div.ellipsis {
   margin-bottom: 1em;
 }
 
-#gh-dark-mode-only:target .progress {
+#gh-dark-mode-only .progress {
   background-color: rgba(110, 118, 129, 0.4);
 }
 
@@ -265,7 +265,7 @@ div.ellipsis {
   border-collapse: collapse;
 }
 
-#gh-dark-mode-only:target .progress-item {
+#gh-dark-mode-only .progress-item {
   outline: 2px solid #393f47;
 }
 
@@ -275,7 +275,7 @@ div.ellipsis {
   color: rgb(36, 41, 46);
 }
 
-#gh-dark-mode-only:target .lang {
+#gh-dark-mode-only .lang {
   color: #c9d1d9;
 }
 
@@ -283,7 +283,7 @@ div.ellipsis {
   color: rgb(88, 96, 105)
 }
 
-#gh-dark-mode-only:target .percent {
+#gh-dark-mode-only .percent {
   color: #8b949e;
 }
 </style>
@@ -330,7 +330,7 @@ svg {
   ry: 6px;
 }
 
-#gh-dark-mode-only:target #background {
+#gh-dark-mode-only #background {
   fill: #0d1117;
   stroke-width: 0.5px;
 }
@@ -355,7 +355,7 @@ th {
   color: rgb(3, 102, 214);
 }
 
-#gh-dark-mode-only:target th {
+#gh-dark-mode-only th {
   color: #58a6ff;
 }
 
@@ -368,7 +368,7 @@ td {
   color: rgb(88, 96, 105);
 }
 
-#gh-dark-mode-only:target td {
+#gh-dark-mode-only td {
   color: #c9d1d9;
 }
 
@@ -383,7 +383,7 @@ tr {
   vertical-align: top;
 }
 
-#gh-dark-mode-only:target .octicon {
+#gh-dark-mode-only .octicon {
   fill: #8b949e;
 }
 
