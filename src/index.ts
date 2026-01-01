@@ -1,11 +1,11 @@
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import { fetchGitHubStats } from "./stats.ts";
 import { getLangToColor } from "./colors.ts";
 
+declare const TEMPLATES: Record<string, string>;
+
 const useTemplate = (name: string, trasform: (template: string) => string) =>
-  readFile(`templates/${name}.svg`, "utf8").then((template) =>
-    writeFile(`generated/${name}.svg`, trasform(template), "utf8"),
-  );
+  writeFile(`generated/${name}.svg`, trasform(TEMPLATES[name]!), "utf8");
 
 const stats = await fetchGitHubStats();
 
