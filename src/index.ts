@@ -19,11 +19,24 @@ await Promise.all([
       .replace(/{{ name }}/g, stats.login)
       .replace(/{{ stars }}/g, stats.stars.toString())
       .replace(/{{ contributions }}/g, stats.contributionsCount.toString())
+      .replace(/{{ issues_closed }}/g, stats.issues.closedCount.toString())
+      .replace(/{{ issues }}/g, stats.issues.count.toString())
       .replace(
-        /{{ lines_changed }}/g,
-        `+${stats.changedLines.additions} / -${stats.changedLines.deletions}`,
+        /{{ avg_issue_close_time }}/g,
+        (stats.issues.averageCloseTime / (1000 * 60 * 60)).toFixed(0) + "h",
       )
-      .replace(/{{ repos }}/g, stats.repoCount.toString()),
+      .replace(/{{ repos }}/g, stats.repoCount.toString())
+      .replace(/{{ productive_day }}/g, stats.mostProductiveDay)
+      .replace(/{{ current_streak }}/g, stats.streaks.current.toString())
+      .replace(/{{ longest_streak }}/g, stats.streaks.longest.toString())
+      .replace(
+        /{{ longest_streak_frame }}/g,
+        stats.streaks.longestTimeframe
+          ? stats.streaks.longestTimeframe.from.toLocaleDateString() +
+              " - " +
+              stats.streaks.longestTimeframe.to.toLocaleDateString()
+          : "N/A",
+      ),
   ),
 
   useTemplate("languages", (template) => {

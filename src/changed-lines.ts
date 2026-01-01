@@ -1,3 +1,5 @@
+// NOT USED ANYMORE BECAUSE OF RATE LIMITING
+
 import { req } from "./api";
 
 const fetchAllRepos = async (owner: string) => {
@@ -22,26 +24,32 @@ const fetchAllRepos = async (owner: string) => {
 const fetchContributorStats = (owner: string, repo: string) =>
   req<any>(`/repos/${owner}/${repo}/stats/contributors`);
 
-export const getChangedLines = async (reposOwner: string) => {
-  const repos = await fetchAllRepos(reposOwner);
-
-  let additions = 0;
-  let deletions = 0;
-
-  const stats = await Promise.all(
-    repos.map(({ name }) => fetchContributorStats(reposOwner, name)),
-  );
-
-  for (const repoStats of stats) {
-    if (!repoStats) continue;
-    const me = repoStats.find((c: any) => c.author?.login === reposOwner);
-    if (!me) continue;
-
-    for (const week of me.weeks) {
-      additions += week.a;
-      deletions += week.d;
-    }
-  }
-
-  return { additions, deletions };
+export type ChangedLines = {
+  additions: number;
+  deletions: number;
 };
+
+export const getChangedLines = (reposOwner: string): Promise<ChangedLines> =>
+  fetchAllRepos(reposOwner)
+    .then((repos) =>
+      Promise.all(
+        repos.map(({ name }) => fetchContributorStats(reposOwner, name)),
+      ),
+    )
+    .then((stats) => {
+      let additions = 0;
+      let deletions = 0;
+
+      for (const repoStats of stats) {
+        if (!repoStats) continue;
+        const me = repoStats.find((c: any) => c.author?.login === reposOwner);
+        if (!me) continue;
+
+        for (const week of me.weeks) {
+          additions += week.a;
+          deletions += week.d;
+        }
+      }
+
+      return { additions, deletions };
+    });

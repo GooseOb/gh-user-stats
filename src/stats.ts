@@ -1,6 +1,10 @@
 import { makeQuery } from "./api";
-import { getChangedLines } from "./changed-lines";
 import { GITHUB_ACTOR } from "./env";
+import {
+  getDaysOfWeekByContribution,
+  getStreaks,
+  type StreakInfo,
+} from "./streaks";
 
 const query = `
 {
@@ -20,6 +24,13 @@ const query = `
             }
           }
         }
+		issues(first: 100) {
+			nodes {
+				closed
+				createdAt
+				closedAt
+			}
+		}
       }
     }
 	repositoriesContributedTo {
@@ -36,11 +47,17 @@ export type Stats = {
   stars: number;
   contributionsCount: number;
   languageStats: Record<string, number>;
-  changedLines: { additions: number; deletions: number };
+  streaks: StreakInfo;
+  mostProductiveDay: string;
+  issues: {
+    count: number;
+    closedCount: number;
+    averageCloseTime: number;
+  };
 };
 
 export async function fetchGitHubStats(): Promise<Stats> {
-  const data = await makeQuery(query);
+  const data = await makeQuery<any>(query);
 
   if (data.errors) {
     throw new Error(data.errors);
@@ -55,12 +72,12 @@ export async function fetchGitHubStats(): Promise<Stats> {
 
   const contribYears: number[] =
     (
-      await makeQuery(`
+      await makeQuery<any>(`
     query { viewer { contributionsCollection { contributionYears } } }
   `)
     )?.data?.viewer?.contributionsCollection?.contributionYears || [];
 
-  const contribsByYear = await makeQuery(`
+  const contribsByYear = await makeQuery<any>(`
     query {
       viewer {
         ${contribYears
@@ -69,7 +86,16 @@ export async function fetchGitHubStats(): Promise<Stats> {
           year${year}: contributionsCollection(
             from: "${year}-01-01T00:00:00Z",
             to: "${year + 1}-01-01T00:00:00Z"
-          ) { contributionCalendar { totalContributions } }
+          ) {
+          	contributionCalendar {
+          		totalContributions
+				weeks {
+          			contributionDays {
+          				date contributionCount
+          			}
+          		}
+          	}
+          }
         `,
           )
           .join("\n")}
@@ -77,20 +103,55 @@ export async function fetchGitHubStats(): Promise<Stats> {
     }
   `);
 
-  const contributionsCount = Object.values(
-    contribsByYear?.data?.viewer || {},
-  ).reduce(
+  const years = Object.values(contribsByYear?.data?.viewer || {});
+
+  const contributionsCount = years.reduce(
     (sum: number, y: any) =>
       sum + (y?.contributionCalendar?.totalContributions || 0),
     0,
   );
 
+  const days = years
+    .flatMap(({ contributionCalendar: { weeks } }: any) =>
+      weeks.flatMap(({ contributionDays }: any) => contributionDays),
+    )
+    .map(({ date, contributionCount }: any) => ({
+      date: new Date(date),
+      contributionCount,
+    }));
+
+  const streaks = getStreaks(days);
+
+  const mostProductiveDay =
+    getDaysOfWeekByContribution(days).mostProductiveDay.name;
+
   const languageStats: Record<string, number> = {};
+  const issues = {
+    count: 0,
+    closedCount: 0,
+    // in hours
+    averageCloseTime: 0,
+  };
+
   for (const repo of repositories.nodes) {
     for (const lang of repo.languages?.edges || []) {
       const langName = lang.node.name;
       languageStats[langName] = (languageStats[langName] || 0) + lang.size;
     }
+    for (const issue of repo.issues.nodes) {
+      if (issue.closed) {
+        const createdAt = new Date(issue.createdAt);
+        const closedAt = new Date(issue.closedAt);
+        const diff = closedAt.getTime() - createdAt.getTime();
+        ++issues.closedCount;
+        issues.averageCloseTime += diff;
+      }
+    }
+    issues.count += repo.issues.nodes.length;
+  }
+
+  if (issues.closedCount > 0) {
+    issues.averageCloseTime /= issues.closedCount;
   }
 
   return {
@@ -100,6 +161,8 @@ export async function fetchGitHubStats(): Promise<Stats> {
     stars,
     contributionsCount,
     languageStats,
-    changedLines: await getChangedLines(GITHUB_ACTOR),
+    streaks,
+    mostProductiveDay,
+    issues,
   };
 }

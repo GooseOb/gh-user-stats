@@ -34,7 +34,7 @@ export const req = async <T>(endpoint: string) => {
   return null;
 };
 
-export const makeQuery = (query: string) =>
+export const makeQuery = <T>(query: string) =>
   fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: {
@@ -42,4 +42,4 @@ export const makeQuery = (query: string) =>
       Authorization: `Bearer ${ACCESS_TOKEN}`,
     },
     body: JSON.stringify({ query }),
-  }).then((res) => res.json());
+  }).then((res) => res.json()) as Promise<T>;
